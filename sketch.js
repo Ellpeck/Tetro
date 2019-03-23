@@ -68,8 +68,9 @@ const pieceZ = new Piece("#FF0000", 3, 2, [
     [false, true, true]
 ]);
 
-const width = 10;
-const height = 20;
+const gridWidth = 10;
+const gridHeight = 20;
+const updateTime = 1000;
 let board;
 
 let pieceQueue = [];
@@ -78,14 +79,21 @@ let currX;
 let currY;
 let currRotation;
 
+let lastUpdateMillis;
+let isGameOver;
+
 function setup() {
     createCanvas(640, 480);
+    initGame();
+}
 
+function initGame() {
+    isGameOver = false;
     board = [];
-    for (let i = 0; i < width; i++)
+    for (let i = 0; i < gridWidth; i++)
         board[i] = [];
-
     selectNewPiece();
+    lastUpdateMillis = millis();
 }
 
 function draw() {
@@ -93,17 +101,31 @@ function draw() {
     stroke(0);
 
     let scale = 20;
-    for (let x = 0; x < width; x++) {
-        for (let y = 0; y < height; y++) {
+    for (let x = 0; x < gridWidth; x++) {
+        for (let y = 0; y < gridHeight; y++) {
             let field = board[x][y];
             fill(!field ? 255 : field);
             rect(x * scale, y * scale, scale, scale);
         }
     }
-    drawPiece(currPiece, currX * scale, currY * scale, currRotation, scale);
 
-    for (let i = 0; i < 5; i++) {
-        drawPiece(pieceQueue[i], 230, 20 + i * 50, 0, 15);
+    if (!isGameOver) {
+        drawPiece(currPiece, currX * scale, currY * scale, currRotation, scale);
+
+        for (let i = 0; i < 5; i++) {
+            drawPiece(pieceQueue[i], 240, 20 + i * 50, 0, 15);
+        }
+
+        let now = millis();
+        if (now - lastUpdateMillis >= updateTime) {
+            lastUpdateMillis = now;
+            movePiece(0, 1);
+        }
+    } else {
+        fill(0);
+        textAlign(CENTER, CENTER);
+        textSize(50);
+        text("Game Over :(", width / 2, height / 2);
     }
 }
 
@@ -121,20 +143,26 @@ function drawPiece(piece, theX, theY, rotation, scale) {
 }
 
 function keyPressed() {
-    if (keyCode == LEFT_ARROW) {
-        movePiece(-1, 0);
-    } else if (keyCode == RIGHT_ARROW) {
-        movePiece(1, 0);
-    } else if (keyCode == DOWN_ARROW) {
-        movePiece(0, 1);
-    } else if (key == 'Q') {
-        rotatePiece(-1);
-    } else if (key == 'E') {
-        rotatePiece(1);
-    } else if (key == ' ') {
-        while (true) {
-            if (!movePiece(0, 1))
-                break;
+    if (!isGameOver) {
+        if (keyCode == LEFT_ARROW) {
+            movePiece(-1, 0);
+        } else if (keyCode == RIGHT_ARROW) {
+            movePiece(1, 0);
+        } else if (keyCode == DOWN_ARROW) {
+            movePiece(0, 1);
+        } else if (key == 'Q') {
+            rotatePiece(1);
+        } else if (key == 'E') {
+            rotatePiece(-1);
+        } else if (key == ' ') {
+            while (true) {
+                if (!movePiece(0, 1))
+                    break;
+            }
+        }
+    } else {
+        if (key == ' ') {
+            initGame();
         }
     }
 }
@@ -181,9 +209,13 @@ function placeCurrPiece() {
 
 function selectNewPiece() {
     currPiece = getPieceFromQueue();
-    currX = floor(width / 2);
+    currX = floor(gridWidth / 2);
     currY = currPiece.height - 1;
     currRotation = 0;
+
+    if (!isValidPosition(currPiece, currX, currY, currRotation)) {
+        isGameOver = true;
+    }
 }
 
 function isValidPosition(piece, x, y, rotation) {
@@ -197,7 +229,7 @@ function isValidPosition(piece, x, y, rotation) {
             let newY = y - floor(h / 2) + yOff;
             if (newX < 0)
                 return false;
-            if (newX >= width || newY >= height)
+            if (newX >= gridWidth || newY >= gridHeight)
                 return false;
             if (board[newX][newY])
                 return false;
@@ -208,21 +240,21 @@ function isValidPosition(piece, x, y, rotation) {
 
 function clearRows() {
     let cleared = [];
-    for (let y = height - 1; y >= 0; y--) {
+    for (let y = gridHeight - 1; y >= 0; y--) {
         let full = 0;
-        for (let x = 0; x < width; x++) {
+        for (let x = 0; x < gridWidth; x++) {
             if (board[x][y])
                 full++;
         }
-        if (full == width) {
-            for (let x = 0; x < width; x++)
+        if (full == gridWidth) {
+            for (let x = 0; x < gridWidth; x++)
                 board[x][y] = undefined;
             cleared.push(y);
         }
     }
     for (let i = cleared.length - 1; i >= 0; i--) {
         for (let y = cleared[i] - 1; y >= 0; y--) {
-            for (let x = 0; x < width; x++) {
+            for (let x = 0; x < gridWidth; x++) {
                 board[x][y + 1] = board[x][y];
             }
         }
