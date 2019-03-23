@@ -73,6 +73,8 @@ const gridHeight = 20;
 const updateTime = 1000;
 let board;
 
+let displayRatio;
+
 let pieceQueue = [];
 let currPiece;
 let currX;
@@ -84,8 +86,13 @@ let lastUpdateMillis;
 let isGameOver;
 
 function setup() {
-    createCanvas(640, 480);
+    createCanvas(windowWidth, windowHeight);
     initGame();
+    calcRatios();
+}
+
+function calcRatios() {
+    displayRatio = min(windowWidth / (gridWidth * 2), windowHeight / (gridHeight + 2));
 }
 
 function initGame() {
@@ -101,7 +108,9 @@ function draw() {
     background(255);
     stroke(0);
 
-    let scale = 20;
+    translate(windowWidth / 2 - (gridWidth / 2) * displayRatio, displayRatio);
+
+    let scale = displayRatio;
     for (let x = 0; x < gridWidth; x++) {
         for (let y = 0; y < gridHeight; y++) {
             let field = board[x][y];
@@ -119,9 +128,10 @@ function draw() {
         drawPiece(currPiece, currX * scale, previewY * scale, currRotation, scale);
         stroke(0);
 
+        let queueScale = displayRatio * 0.75;
         for (let i = 0; i < 5; i++) {
             fill(pieceQueue[i].color);
-            drawPiece(pieceQueue[i], 240, 20 + i * 50, 0, 15);
+            drawPiece(pieceQueue[i], (gridWidth + 2) * scale, 2 * (i + 1) * scale, 0, queueScale);
         }
 
         let now = millis();
@@ -176,6 +186,11 @@ function keyPressed() {
             initGame();
         }
     }
+}
+
+function windowResized() {
+    resizeCanvas(windowWidth, windowHeight);
+    calcRatios();
 }
 
 function rotatePiece(rotation) {
