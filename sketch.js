@@ -51,7 +51,7 @@ const pieceL = new Piece("#FF7700", 3, 2, [
     [false, false, true],
     [true, true, true]
 ]);
-const pieceO = new Piece("#FFFF00", 2, 2, [
+const pieceO = new Piece("#DDDD00", 2, 2, [
     [true, true],
     [true, true]
 ]);
@@ -70,7 +70,6 @@ const pieceZ = new Piece("#FF0000", 3, 2, [
 
 const gridWidth = 10;
 const gridHeight = 20;
-const updateTime = 1000;
 let board;
 
 let displayRatio;
@@ -84,11 +83,21 @@ let currRotation;
 
 let lastUpdateMillis;
 let isGameOver;
+let level;
+
+let highestPoints;
+let clearedRows;
+let currentPoints;
+let turnMultiplier;
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
     initGame();
     calcRatios();
+
+    highestPoints = getCookie("highscore");
+    if (!highestPoints)
+        highestPoints = 0;
 }
 
 function calcRatios() {
@@ -97,63 +106,99 @@ function calcRatios() {
 
 function initGame() {
     isGameOver = false;
+    level = 1;
     board = [];
     for (let i = 0; i < gridWidth; i++)
         board[i] = [];
     selectNewPiece();
     lastUpdateMillis = millis();
+    clearedRows = 0;
+    currentPoints = 0;
+    turnMultiplier = 0;
 }
 
 function draw() {
     background(255);
-    stroke(0);
 
-    translate(windowWidth / 2 - (gridWidth / 2) * displayRatio, displayRatio);
+    let boardX = windowWidth / 2 - (gridWidth / 2) * displayRatio;
+    let boardY = windowHeight / 2 - (gridHeight / 2) * displayRatio;
 
+    stroke(150);
     let scale = displayRatio;
     for (let x = 0; x < gridWidth; x++) {
         for (let y = 0; y < gridHeight; y++) {
             let field = board[x][y];
-            fill(!field ? 255 : field);
-            rect(x * scale, y * scale, scale, scale);
+            fill(!field ? 225 : field);
+            rect(boardX + x * scale, boardY + y * scale, scale, scale);
         }
     }
 
+    stroke(0);
+    fill(0);
+    textAlign(LEFT, TOP);
+    textSize(scale);
+    let sc = "Score: " + currentPoints;
+    let high = "Highscore: " + max(currentPoints, highestPoints);
+    let x = boardX - displayRatio - max(textWidth(sc), textWidth(high) * 0.75);
+    text(sc, x, boardY + displayRatio);
+    textSize(scale * 0.75);
+    text(high, x, boardY + 2 * displayRatio);
+
+    textAlign(RIGHT, TOP);
+    text("Rows Cleared: " + clearedRows, boardX - displayRatio, boardY + 4 * displayRatio);
+    text("Level " + level, boardX - displayRatio, boardY + 6 * displayRatio);
+
     if (!isGameOver) {
+        stroke(150);
         fill(currPiece.color);
-        drawPiece(currPiece, currX * scale, currY * scale, currRotation, scale);
+        drawPiece(currPiece, boardX + currX * scale, boardY + currY * scale, currRotation, scale);
 
         noStroke();
         fill(red(currPiece.color), green(currPiece.color), blue(currPiece.color), 75);
-        drawPiece(currPiece, currX * scale, previewY * scale, currRotation, scale);
-        stroke(0);
+        drawPiece(currPiece, boardX + currX * scale, boardY + previewY * scale, currRotation, scale);
 
+        stroke(150);
         let queueScale = displayRatio * 0.75;
         for (let i = 0; i < 5; i++) {
             fill(pieceQueue[i].color);
-            drawPiece(pieceQueue[i], (gridWidth + 2) * scale, 2 * (i + 1) * scale, 0, queueScale);
+            drawPiece(pieceQueue[i], boardX + (gridWidth + 2) * scale, boardY + 2 * (i + 1) * scale, 0, queueScale);
         }
 
+        let speedFactor = 1 - (level - 1) * 0.1;
         let now = millis();
-        if (now - lastUpdateMillis >= updateTime) {
+        if (now - lastUpdateMillis >= 1000 * speedFactor) {
             lastUpdateMillis = now;
             movePiece(0, 1);
         }
     } else {
+        stroke(0);
         fill(0);
         textAlign(CENTER, CENTER);
-        textSize(50);
-        text("Game Over :(", width / 2, height / 2);
+        textSize(scale * 2);
+        text("Game Over", width / 2, height / 3);
+        textSize(scale * 0.75);
+        text("Press Enter to restart", width / 2, height / 3 + 1.5 * scale);
     }
+
+    stroke(0);
+    fill(0);
+    textAlign(RIGHT, BOTTOM);
+    let y = boardY + gridHeight * displayRatio;
+    textSize(0.5 * scale);
+    text("Arrow keys to move", boardX - scale, y - scale * 2.25);
+    text("Q, E to rotate", boardX - scale, y - scale * 1.5);
+    text("Space to drop", boardX - scale, y - scale * 0.75);
 }
 
 function drawPiece(piece, theX, theY, rotation, scale) {
     let w = piece.getWidth(rotation);
     let h = piece.getHeight(rotation);
+    let startX = theX - floor(w / 2) * scale;
+    let startY = theY - floor(h / 2) * scale;
     for (let x = 0; x < w; x++) {
         for (let y = 0; y < h; y++) {
             if (piece.hasTile(x, y, rotation)) {
-                rect(theX + (-floor(w / 2) + x) * scale, theY + (-floor(h / 2) + y) * scale, scale, scale);
+                rect(startX + x * scale, startY + y * scale, scale, scale);
             }
         }
     }
@@ -182,7 +227,7 @@ function keyPressed() {
             }
         }
     } else {
-        if (key == ' ') {
+        if (keyCode == ENTER) {
             initGame();
         }
     }
@@ -241,8 +286,16 @@ function selectNewPiece() {
 
     if (!isValidPosition(currPiece, currX, currY, currRotation)) {
         isGameOver = true;
+        onGameOver();
     } else {
         updatePreview();
+    }
+}
+
+function onGameOver() {
+    if (currentPoints > highestPoints) {
+        setCookie("highscore", currentPoints, 365);
+        highestPoints = currentPoints;
     }
 }
 
@@ -294,6 +347,22 @@ function clearRows() {
             }
         }
     }
+    awardPoints(cleared.length);
+}
+
+function awardPoints(rowsCleared) {
+    if (rowsCleared <= 0)
+        turnMultiplier = 0;
+    else
+        turnMultiplier++;
+
+    let points = 500 * rowsCleared * rowsCleared + (2000 * turnMultiplier);
+    currentPoints += points;
+
+    let newTotal = clearedRows + rowsCleared;
+    if (floor(newTotal / 5) != floor(clearedRows / 5))
+        level++;
+    clearedRows = newTotal;
 }
 
 function getPieceFromQueue() {
@@ -303,4 +372,19 @@ function getPieceFromQueue() {
         pieceQueue = pieceQueue.concat(pieces);
     }
     return pieceQueue.shift();
+}
+
+function getCookie(key) {
+    let c = document.cookie;
+    if (!c)
+        return undefined;
+    let start = c.indexOf(key + "=") + key.length + 1;
+    let end = c.indexOf(";", start);
+    return c.substring(start, end < 0 ? c.length : end);
+}
+
+function setCookie(key, value, days) {
+    var date = new Date();
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    document.cookie = key + "=" + value + "; expires=" + date.toUTCString();
 }
