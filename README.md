@@ -1,2 +1,0 @@
-# Tetro
-Definitely not Tetris
