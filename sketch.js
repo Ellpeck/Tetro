@@ -77,6 +77,7 @@ let pieceQueue = [];
 let currPiece;
 let currX;
 let currY;
+let previewY;
 let currRotation;
 
 let lastUpdateMillis;
@@ -110,9 +111,16 @@ function draw() {
     }
 
     if (!isGameOver) {
+        fill(currPiece.color);
         drawPiece(currPiece, currX * scale, currY * scale, currRotation, scale);
 
+        noStroke();
+        fill(red(currPiece.color), green(currPiece.color), blue(currPiece.color), 75);
+        drawPiece(currPiece, currX * scale, previewY * scale, currRotation, scale);
+        stroke(0);
+
         for (let i = 0; i < 5; i++) {
+            fill(pieceQueue[i].color);
             drawPiece(pieceQueue[i], 240, 20 + i * 50, 0, 15);
         }
 
@@ -130,7 +138,6 @@ function draw() {
 }
 
 function drawPiece(piece, theX, theY, rotation, scale) {
-    fill(piece.color);
     let w = piece.getWidth(rotation);
     let h = piece.getHeight(rotation);
     for (let x = 0; x < w; x++) {
@@ -146,14 +153,18 @@ function keyPressed() {
     if (!isGameOver) {
         if (keyCode == LEFT_ARROW) {
             movePiece(-1, 0);
+            updatePreview();
         } else if (keyCode == RIGHT_ARROW) {
             movePiece(1, 0);
+            updatePreview();
         } else if (keyCode == DOWN_ARROW) {
             movePiece(0, 1);
         } else if (key == 'Q') {
             rotatePiece(1);
+            updatePreview();
         } else if (key == 'E') {
             rotatePiece(-1);
+            updatePreview();
         } else if (key == ' ') {
             while (true) {
                 if (!movePiece(0, 1))
@@ -215,6 +226,15 @@ function selectNewPiece() {
 
     if (!isValidPosition(currPiece, currX, currY, currRotation)) {
         isGameOver = true;
+    } else {
+        updatePreview();
+    }
+}
+
+function updatePreview() {
+    previewY = currY;
+    while (isValidPosition(currPiece, currX, previewY + 1, currRotation)) {
+        previewY++;
     }
 }
 
