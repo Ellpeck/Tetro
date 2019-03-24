@@ -81,6 +81,9 @@ let currY;
 let previewY;
 let currRotation;
 
+let holdPiece;
+let isSwitchedPiece;
+
 let lastUpdateMillis;
 let isGameOver;
 let level;
@@ -101,16 +104,17 @@ function setup() {
 }
 
 function calcRatios() {
-    displayRatio = min(windowWidth / (gridWidth * 2), windowHeight / (gridHeight + 2));
+    displayRatio = min(windowWidth / (gridWidth * 2.5), windowHeight / (gridHeight + 2));
 }
 
 function initGame() {
     isGameOver = false;
+    holdPiece = undefined;
     level = 1;
     board = [];
     for (let i = 0; i < gridWidth; i++)
         board[i] = [];
-    selectNewPiece();
+    selectNewPiece(getPieceFromQueue());
     lastUpdateMillis = millis();
     clearedRows = 0;
     currentPoints = 0;
@@ -140,13 +144,13 @@ function draw() {
     let sc = "Score: " + currentPoints;
     let high = "Highscore: " + max(currentPoints, highestPoints);
     let x = boardX - displayRatio - max(textWidth(sc), textWidth(high) * 0.75);
-    text(sc, x, boardY + displayRatio);
+    text(sc, x, boardY + 5 * displayRatio);
     textSize(scale * 0.75);
-    text(high, x, boardY + 2 * displayRatio);
+    text(high, x, boardY + 6 * displayRatio);
 
     textAlign(RIGHT, TOP);
-    text("Rows Cleared: " + clearedRows, boardX - displayRatio, boardY + 4 * displayRatio);
-    text("Level " + level, boardX - displayRatio, boardY + 6 * displayRatio);
+    text("Rows Cleared: " + clearedRows, boardX - displayRatio, boardY + 8 * displayRatio);
+    text("Level " + level, boardX - displayRatio, boardY + 9 * displayRatio);
 
     if (!isGameOver) {
         stroke(150);
@@ -157,14 +161,27 @@ function draw() {
         fill(red(currPiece.color), green(currPiece.color), blue(currPiece.color), 75);
         drawPiece(currPiece, boardX + currX * scale, boardY + previewY * scale, currRotation, scale);
 
+        stroke(0);
+        fill(0);
+        textAlign(LEFT, TOP);
+        textSize(scale * 0.75);
+        text("Next Pieces", boardX + (gridWidth + 1) * scale, boardY + scale);
+        textAlign(RIGHT, TOP);
+        text("Hold", boardX - scale, boardY + scale);
+
         stroke(150);
         let queueScale = displayRatio * 0.75;
         for (let i = 0; i < 5; i++) {
             fill(pieceQueue[i].color);
-            drawPiece(pieceQueue[i], boardX + (gridWidth + 2) * scale, boardY + 2 * (i + 1) * scale, 0, queueScale);
+            drawPiece(pieceQueue[i], boardX + (gridWidth + 2) * scale, boardY + scale + 2 * (i + 1) * scale, 0, queueScale);
         }
 
-        let speedFactor = 1 - (level - 1) * 0.1;
+        if (holdPiece) {
+            fill(holdPiece.color);
+            drawPiece(holdPiece, boardX - 2 * scale, boardY + 3 * scale, 0, queueScale);
+        }
+
+        let speedFactor = 1 - (level - 1) * 0.05;
         let now = millis();
         if (now - lastUpdateMillis >= 1000 * speedFactor) {
             lastUpdateMillis = now;
@@ -185,9 +202,10 @@ function draw() {
     textAlign(RIGHT, BOTTOM);
     let y = boardY + gridHeight * displayRatio;
     textSize(0.5 * scale);
-    text("Arrow keys to move", boardX - scale, y - scale * 2.25);
-    text("Q, E to rotate", boardX - scale, y - scale * 1.5);
-    text("Space to drop", boardX - scale, y - scale * 0.75);
+    text("Arrow keys to move", boardX - scale, y - scale * 3);
+    text("Q, E to rotate", boardX - scale, y - scale * 2.25);
+    text("Space to drop", boardX - scale, y - scale * 1.5);
+    text("TAB to hold", boardX - scale, y - scale * 0.75);
 }
 
 function drawPiece(piece, theX, theY, rotation, scale) {
@@ -225,6 +243,14 @@ function keyPressed() {
                 if (!movePiece(0, 1))
                     break;
             }
+        } else if (keyCode == TAB) {
+            if (!isSwitchedPiece) {
+                let hold = holdPiece;
+                holdPiece = currPiece;
+                selectNewPiece(hold ? hold : getPieceFromQueue());
+                isSwitchedPiece = true;
+            }
+            return false;
         }
     } else {
         if (keyCode == ENTER) {
@@ -257,7 +283,7 @@ function movePiece(xOff, yOff) {
         if (yOff > 0) {
             placeCurrPiece();
             clearRows();
-            selectNewPiece();
+            selectNewPiece(getPieceFromQueue());
         }
         return false;
     }
@@ -278,11 +304,14 @@ function placeCurrPiece() {
     }
 }
 
-function selectNewPiece() {
-    currPiece = getPieceFromQueue();
+function selectNewPiece(piece) {
+    currPiece = piece;
     currX = floor(gridWidth / 2);
     currY = currPiece.height - 1;
     currRotation = 0;
+
+    if (isSwitchedPiece)
+        isSwitchedPiece = false;
 
     if (!isValidPosition(currPiece, currX, currY, currRotation)) {
         isGameOver = true;
