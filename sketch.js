@@ -40,6 +40,14 @@ class Piece {
     }
 }
 
+class Message {
+    constructor(color, text) {
+        this.color = color;
+        this.text = text;
+        this.timer = 0;
+    }
+}
+
 const pieceI = new Piece("#7777FF", 4, 1, [
     [true, true, true, true]
 ]);
@@ -94,8 +102,12 @@ let clearedRows;
 let currentPoints;
 let turnMultiplier;
 
+let messageQueue = [];
+
 function setup() {
     createCanvas(windowWidth, windowHeight);
+    frameRate(30);
+
     initGame();
     calcRatios();
 
@@ -185,6 +197,22 @@ function draw() {
             stroke(150);
             fill(holdPiece.color);
             drawPiece(holdPiece, boardX - 2 * scale, boardY + 3 * scale, 0, queueScale);
+        }
+
+        let messageScale = scale;
+        let y = boardY + gridHeight * displayRatio - messageScale * (messageQueue.length + 1);
+        textAlign(LEFT, TOP);
+        textSize(messageScale * 0.8);
+        for (let i = messageQueue.length - 1; i >= 0; i--) {
+            let message = messageQueue[i];
+            stroke(message.color);
+            fill(message.color);
+            text(message.text, boardX + gridWidth * displayRatio + scale, y);
+            y += messageScale;
+
+            message.timer++;
+            if (message.timer >= 90)
+                messageQueue.splice(i, 1);
         }
 
         if (!isPaused) {
@@ -410,9 +438,19 @@ function awardPoints(rowsCleared) {
     currentPoints += points;
 
     let newTotal = clearedRows + rowsCleared;
-    if (floor(newTotal / 5) != floor(clearedRows / 5))
+    if (floor(newTotal / 5) != floor(clearedRows / 5)) {
         level++;
+        messageQueue.push(new Message("#2c89f4", "Level Up!"));
+    }
     clearedRows = newTotal;
+
+    if (rowsCleared >= 4) {
+        messageQueue.push(new Message("#09c600", "Tetro!"));
+    } else if (rowsCleared >= 3) {
+        messageQueue.push(new Message(0, "Triple Clear!"));
+    } else if (rowsCleared >= 2) {
+        messageQueue.push(new Message(0, "Double Clear!"));
+    }
 }
 
 function getPieceFromQueue() {
