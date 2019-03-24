@@ -86,6 +86,7 @@ let isSwitchedPiece;
 
 let lastUpdateMillis;
 let isGameOver;
+let isPaused;
 let level;
 
 let highestPoints;
@@ -126,13 +127,13 @@ function draw() {
 
     let boardX = windowWidth / 2 - (gridWidth / 2) * displayRatio;
     let boardY = windowHeight / 2 - (gridHeight / 2) * displayRatio;
+    let scale = displayRatio;
 
     stroke(150);
-    let scale = displayRatio;
     for (let x = 0; x < gridWidth; x++) {
         for (let y = 0; y < gridHeight; y++) {
             let field = board[x][y];
-            fill(!field ? 225 : field);
+            fill(!field || isPaused ? 225 : field);
             rect(boardX + x * scale, boardY + y * scale, scale, scale);
         }
     }
@@ -153,13 +154,15 @@ function draw() {
     text("Level " + level, boardX - displayRatio, boardY + 9 * displayRatio);
 
     if (!isGameOver) {
-        stroke(150);
-        fill(currPiece.color);
-        drawPiece(currPiece, boardX + currX * scale, boardY + currY * scale, currRotation, scale);
+        if (!isPaused) {
+            stroke(150);
+            fill(currPiece.color);
+            drawPiece(currPiece, boardX + currX * scale, boardY + currY * scale, currRotation, scale);
 
-        noStroke();
-        fill(red(currPiece.color), green(currPiece.color), blue(currPiece.color), 75);
-        drawPiece(currPiece, boardX + currX * scale, boardY + previewY * scale, currRotation, scale);
+            noStroke();
+            fill(red(currPiece.color), green(currPiece.color), blue(currPiece.color), 75);
+            drawPiece(currPiece, boardX + currX * scale, boardY + previewY * scale, currRotation, scale);
+        }
 
         stroke(0);
         fill(0);
@@ -169,23 +172,28 @@ function draw() {
         textAlign(RIGHT, TOP);
         text("Hold", boardX - scale, boardY + scale);
 
-        stroke(150);
         let queueScale = displayRatio * 0.75;
-        for (let i = 0; i < 5; i++) {
-            fill(pieceQueue[i].color);
-            drawPiece(pieceQueue[i], boardX + (gridWidth + 2) * scale, boardY + scale + 2 * (i + 1) * scale, 0, queueScale);
+        if (!isPaused) {
+            stroke(150);
+            for (let i = 0; i < 5; i++) {
+                fill(pieceQueue[i].color);
+                drawPiece(pieceQueue[i], boardX + (gridWidth + 2) * scale, boardY + scale + 2 * (i + 1) * scale, 0, queueScale);
+            }
         }
 
         if (holdPiece) {
+            stroke(150);
             fill(holdPiece.color);
             drawPiece(holdPiece, boardX - 2 * scale, boardY + 3 * scale, 0, queueScale);
         }
 
-        let speedFactor = 1 - (level - 1) * 0.05;
-        let now = millis();
-        if (now - lastUpdateMillis >= 1000 * speedFactor) {
-            lastUpdateMillis = now;
-            movePiece(0, 1);
+        if (!isPaused) {
+            let speedFactor = 1 - (level - 1) * 0.05;
+            let now = millis();
+            if (now - lastUpdateMillis >= 1000 * speedFactor) {
+                lastUpdateMillis = now;
+                movePiece(0, 1);
+            }
         }
     } else {
         stroke(0);
@@ -197,11 +205,20 @@ function draw() {
         text("Press Enter to restart", width / 2, height / 3 + 1.5 * scale);
     }
 
+    if (isPaused) {
+        stroke(0);
+        fill(0);
+        textAlign(CENTER, CENTER);
+        textSize(scale * 2);
+        text("Paused", width / 2, height / 3);
+    }
+
     stroke(0);
     fill(0);
     textAlign(RIGHT, BOTTOM);
     let y = boardY + gridHeight * displayRatio;
     textSize(0.5 * scale);
+    text("ESC to pause", boardX - scale, y - scale * 3.75);
     text("Arrow keys to move", boardX - scale, y - scale * 3);
     text("Q, E to rotate", boardX - scale, y - scale * 2.25);
     text("Space to drop", boardX - scale, y - scale * 1.5);
@@ -223,34 +240,38 @@ function drawPiece(piece, theX, theY, rotation, scale) {
 }
 
 function keyPressed() {
-    if (!isGameOver) {
-        if (keyCode == LEFT_ARROW) {
-            movePiece(-1, 0);
-            updatePreview();
-        } else if (keyCode == RIGHT_ARROW) {
-            movePiece(1, 0);
-            updatePreview();
-        } else if (keyCode == DOWN_ARROW) {
-            movePiece(0, 1);
-        } else if (key == 'Q') {
-            rotatePiece(1);
-            updatePreview();
-        } else if (key == 'E') {
-            rotatePiece(-1);
-            updatePreview();
-        } else if (key == ' ') {
-            while (true) {
-                if (!movePiece(0, 1))
-                    break;
+    if (keyCode == ESCAPE) {
+        isPaused = !isPaused;
+    } else if (!isGameOver) {
+        if (!isPaused) {
+            if (keyCode == LEFT_ARROW) {
+                movePiece(-1, 0);
+                updatePreview();
+            } else if (keyCode == RIGHT_ARROW) {
+                movePiece(1, 0);
+                updatePreview();
+            } else if (keyCode == DOWN_ARROW) {
+                movePiece(0, 1);
+            } else if (key == 'Q') {
+                rotatePiece(1);
+                updatePreview();
+            } else if (key == 'E') {
+                rotatePiece(-1);
+                updatePreview();
+            } else if (key == ' ') {
+                while (true) {
+                    if (!movePiece(0, 1))
+                        break;
+                }
+            } else if (keyCode == TAB) {
+                if (!isSwitchedPiece) {
+                    let hold = holdPiece;
+                    holdPiece = currPiece;
+                    selectNewPiece(hold ? hold : getPieceFromQueue());
+                    isSwitchedPiece = true;
+                }
+                return false;
             }
-        } else if (keyCode == TAB) {
-            if (!isSwitchedPiece) {
-                let hold = holdPiece;
-                holdPiece = currPiece;
-                selectNewPiece(hold ? hold : getPieceFromQueue());
-                isSwitchedPiece = true;
-            }
-            return false;
         }
     } else {
         if (keyCode == ENTER) {
