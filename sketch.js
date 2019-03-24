@@ -268,10 +268,10 @@ function drawPiece(piece, theX, theY, rotation, scale) {
 }
 
 function keyPressed() {
-    if (keyCode == ESCAPE) {
-        isPaused = !isPaused;
-    } else if (!isGameOver) {
-        if (!isPaused) {
+    if (!isGameOver) {
+        if (keyCode == ESCAPE) {
+            isPaused = !isPaused;
+        } else if (!isPaused) {
             if (keyCode == LEFT_ARROW) {
                 movePiece(-1, 0);
                 updatePreview();
