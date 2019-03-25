@@ -92,7 +92,7 @@ const pieceZ = new Piece(7, 3, 2, [
 ]);
 
 const gridWidth = 10;
-const gridHeight = 20;
+const gridHeight = 22;
 const menuOptions = 4;
 
 let isMainMenu;
@@ -236,6 +236,9 @@ function draw() {
             rect(boardX + x * scale, boardY + y * scale, scale, scale);
         }
     }
+    strokeWeight(4);
+    line(boardX, boardY + 2 * scale, boardX + gridWidth * scale, boardY + 2 * scale);
+    strokeWeight(1);
 
     stroke(0);
     fill(0);
@@ -257,11 +260,11 @@ function draw() {
             setOutlineColor();
             let color = currentColors()[currPiece.color];
             fill(color);
-            drawPiece(currPiece, boardX + currX * scale, boardY + currY * scale, currRotation, scale);
+            drawPiece(currPiece, boardX + currX * scale, boardY + currY * scale, currRotation, scale, currY);
 
             noStroke();
             fill(red(color), green(color), blue(color), 75);
-            drawPiece(currPiece, boardX + currX * scale, boardY + previewY * scale, currRotation, scale);
+            drawPiece(currPiece, boardX + currX * scale, boardY + previewY * scale, currRotation, scale, previewY);
         }
 
         stroke(0);
@@ -356,14 +359,14 @@ function drawMenuOption(left, right, leftX, rightX, y) {
     text(right, rightX, y);
 }
 
-function drawPiece(piece, theX, theY, rotation, scale) {
+function drawPiece(piece, theX, theY, rotation, scale, logicalY) {
     let w = piece.getWidth(rotation);
     let h = piece.getHeight(rotation);
     let startX = theX - floor(w / 2) * scale;
     let startY = theY - floor(h / 2) * scale;
     for (let x = 0; x < w; x++) {
         for (let y = 0; y < h; y++) {
-            if (piece.hasTile(x, y, rotation)) {
+            if (piece.hasTile(x, y, rotation) && (logicalY == undefined || logicalY - floor(h / 2) + y >= 0)) {
                 rect(startX + x * scale, startY + y * scale, scale, scale);
             }
         }
@@ -502,7 +505,7 @@ function placeCurrPiece() {
 function selectNewPiece(piece) {
     currPiece = piece;
     currX = floor(gridWidth / 2);
-    currY = currPiece.height - 1;
+    currY = 1;
     currRotation = 0;
 
     if (isSwitchedPiece)
