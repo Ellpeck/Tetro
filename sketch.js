@@ -168,11 +168,14 @@ function draw() {
         fill(pieceT.color);
         drawPiece(pieceT, width / 2 + textWidth(s) - scale, height / 4 - scale * 2, 1, scale);
 
-        let y = height / 3;
         stroke(0);
         fill(0);
+        textSize(scale * 0.5);
+        text("Definitely not a Tetris clone", width / 2 + scale, height / 4 + scale);
+
+        let y = height / 3;
         textSize(scale * 0.85);
-        text("Press Enter to play", width / 2, y += 1.25 * scale);
+        text("Press Enter to play", width / 2, y += 2 * scale);
 
         textSize(scale * 0.65);
         text(seed ? ("Seed: " + seed) : "No seed", width / 2, y += 2 * scale);
