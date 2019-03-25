@@ -48,40 +48,56 @@ class Message {
     }
 }
 
-const pieceI = new Piece("#7777FF", 4, 1, [
+class Design {
+    constructor(name, colors) {
+        this.name = name;
+        this.colors = colors;
+    }
+}
+
+const designs = [
+    new Design("Vibrant", ["#969696", "#7777FF", "#0000FF", "#FF7700", "#DDDD00", "#00FF00", "#7700FF", "#FF0000"]),
+    new Design("Grayscale", ["#000000", "#727272", "#727272", "#565656", "#727272", "#565656", "#727272", "#565656"]),
+    new Design("Google", ["#FFFFFF", "#008744", "#0057e7", "#d62d20", "#ffa700", "#008744", "#0057e7", "#d62d20"]),
+    new Design("No Outlines", [undefined, "#7777FF", "#0000FF", "#FF7700", "#DDDD00", "#00FF00", "#7700FF", "#FF0000"]),
+    new Design("Pastel", ["#969696", "#fea3aa", "#f8b88b", "#faf884", "#baed91", "#b2cefe", "#f2a2e8", "#faf884"])
+];
+
+const pieceI = new Piece(1, 4, 1, [
     [true, true, true, true]
 ]);
-const pieceJ = new Piece("#0000FF", 3, 2, [
+const pieceJ = new Piece(2, 3, 2, [
     [true, false, false],
     [true, true, true]
 ]);
-const pieceL = new Piece("#FF7700", 3, 2, [
+const pieceL = new Piece(3, 3, 2, [
     [false, false, true],
     [true, true, true]
 ]);
-const pieceO = new Piece("#DDDD00", 2, 2, [
+const pieceO = new Piece(4, 2, 2, [
     [true, true],
     [true, true]
 ]);
-const pieceS = new Piece("#00FF00", 3, 2, [
+const pieceS = new Piece(5, 3, 2, [
     [false, true, true],
     [true, true, false]
 ]);
-const pieceT = new Piece("#7700FF", 3, 2, [
+const pieceT = new Piece(6, 3, 2, [
     [false, true, false],
     [true, true, true]
 ]);
-const pieceZ = new Piece("#FF0000", 3, 2, [
+const pieceZ = new Piece(7, 3, 2, [
     [true, true, false],
     [false, true, true]
 ]);
 
 const gridWidth = 10;
 const gridHeight = 20;
-const menuOptions = 3;
+const menuOptions = 4;
 
 let isMainMenu;
 let selectedMenuOption;
+let selectedDesign;
 
 let isGameOver;
 let isPaused;
@@ -121,6 +137,9 @@ function setup() {
     highestPoints = getCookie("highscore");
     if (!highestPoints)
         highestPoints = 0;
+    selectedDesign = getCookie("design");
+    if (!selectedDesign)
+        selectedDesign = 0;
 }
 
 function calcRatios() {
@@ -168,8 +187,8 @@ function draw() {
         textSize(scale * 2);
         let s = "Tetro";
         text(s, width / 2, height / 4);
-        stroke(150);
-        fill(pieceT.color);
+        setOutlineColor();
+        fill(currentColors()[pieceT.color]);
         drawPiece(pieceT, width / 2 + textWidth(s) - scale, height / 4 - scale * 2, 1, scale);
 
         stroke(0);
@@ -182,8 +201,8 @@ function draw() {
         let leftX = width / 2 - gridWidth * 0.85 * scale;
         let rightX = width / 2 + gridWidth * 0.85 * scale;
 
-        stroke(150);
-        fill(pieceL.color);
+        setOutlineColor();
+        fill(currentColors()[pieceL.color]);
         drawPiece(pieceL, rightX, y + spacing * selectedMenuOption, 1, scale / 2);
         drawPiece(pieceL, leftX, y + scale / 3 + spacing * selectedMenuOption, 3, scale / 2);
 
@@ -196,6 +215,7 @@ function draw() {
         let seedText = seed ? seed : (selectedMenuOption == 1 ? "(type numbers)" : "None");
         drawMenuOption("Seed", seedText, leftX, rightX, y += spacing);
         drawMenuOption("Kill Screen", killScreenEnabled ? "Enabled" : "Disabled", leftX, rightX, y += spacing);
+        drawMenuOption("Design", designs[selectedDesign].name, leftX, rightX, y += spacing);
 
         y += spacing * 2;
         textSize(scale * 0.5);
@@ -208,7 +228,7 @@ function draw() {
         return;
     }
 
-    stroke(150);
+    setOutlineColor();
     for (let x = 0; x < gridWidth; x++) {
         for (let y = 0; y < gridHeight; y++) {
             let field = board[x][y];
@@ -234,12 +254,13 @@ function draw() {
 
     if (!isGameOver) {
         if (!isPaused) {
-            stroke(150);
-            fill(currPiece.color);
+            setOutlineColor();
+            let color = currentColors()[currPiece.color];
+            fill(color);
             drawPiece(currPiece, boardX + currX * scale, boardY + currY * scale, currRotation, scale);
 
             noStroke();
-            fill(red(currPiece.color), green(currPiece.color), blue(currPiece.color), 75);
+            fill(red(color), green(color), blue(color), 75);
             drawPiece(currPiece, boardX + currX * scale, boardY + previewY * scale, currRotation, scale);
         }
 
@@ -253,16 +274,16 @@ function draw() {
 
         let queueScale = displayRatio * 0.75;
         if (!isPaused) {
-            stroke(150);
+            setOutlineColor();
             for (let i = 0; i < 5; i++) {
-                fill(pieceQueue[i].color);
+                fill(currentColors()[pieceQueue[i].color]);
                 drawPiece(pieceQueue[i], boardX + (gridWidth + 2) * scale, boardY + scale + 2 * (i + 1) * scale, 0, queueScale);
             }
         }
 
         if (holdPiece) {
-            stroke(150);
-            fill(holdPiece.color);
+            setOutlineColor();
+            fill(currentColors()[holdPiece.color]);
             drawPiece(holdPiece, boardX - 2 * scale, boardY + 3 * scale, 0, queueScale);
         }
 
@@ -316,6 +337,18 @@ function draw() {
     text("TAB to hold", boardX - scale, y - scale * 0.75);
 }
 
+function currentColors() {
+    return designs[selectedDesign].colors;
+}
+
+function setOutlineColor() {
+    let color = currentColors()[0];
+    if (color)
+        stroke(color);
+    else
+        noStroke();
+}
+
 function drawMenuOption(left, right, leftX, rightX, y) {
     textAlign(LEFT, TOP);
     text(left, leftX, y);
@@ -358,8 +391,21 @@ function keyPressed() {
                     seed = "";
                 seed += key;
             }
-        } else if (selectedMenuOption == 2 && keyCode == LEFT_ARROW || keyCode == RIGHT_ARROW || keyCode == ENTER) {
+        } else if (selectedMenuOption == 2 && (keyCode == LEFT_ARROW || keyCode == RIGHT_ARROW || keyCode == ENTER)) {
             killScreenEnabled = !killScreenEnabled;
+        } else if (selectedMenuOption == 3) {
+            if (keyCode == LEFT_ARROW) {
+                selectedDesign--;
+                if (selectedDesign < 0)
+                    selectedDesign = designs.length - 1;
+            } else if (keyCode == RIGHT_ARROW) {
+                selectedDesign++;
+                if (selectedDesign >= designs.length)
+                    selectedDesign = 0;
+            } else {
+                return;
+            }
+            setCookie("design", selectedDesign, 365);
         }
         return;
     }
@@ -448,7 +494,7 @@ function placeCurrPiece() {
         for (let y = 0; y < h; y++) {
             if (!currPiece.hasTile(x, y, currRotation))
                 continue;
-            board[currX - floor(w / 2) + x][currY - floor(h / 2) + y] = currPiece.color;
+            board[currX - floor(w / 2) + x][currY - floor(h / 2) + y] = currentColors()[currPiece.color];
         }
     }
 }
@@ -570,7 +616,10 @@ function getCookie(key) {
     let c = document.cookie;
     if (!c)
         return undefined;
-    let start = c.indexOf(key + "=") + key.length + 1;
+    let keyIndex = c.indexOf(key + "=");
+    if (keyIndex < 0)
+        return undefined;
+    let start = keyIndex + key.length + 1;
     let end = c.indexOf(";", start);
     return c.substring(start, end < 0 ? c.length : end);
 }
