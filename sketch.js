@@ -55,7 +55,7 @@ class Design {
     }
 }
 
-const gameModes = ["Normal", "Cleanup"];
+const gameModes = ["Normal", "Cleanup", "Garbage Removal"];
 
 const designs = [
     new Design("Vibrant", ["#969696", "#7777FF", "#0000FF", "#FF7700", "#DDDD00", "#00FF00", "#7700FF", "#FF0000"]),
@@ -176,6 +176,8 @@ function initGame() {
 
     if (selectedGameMode == 1)
         addClutter();
+    else if (selectedGameMode == 2)
+        addGarbage();
 
     selectNewPiece(getPieceFromQueue());
     lastUpdateMillis = millis();
@@ -195,6 +197,17 @@ function addClutter() {
         if (y <= 8)
             break;
         placePiece(x, y, piece, rotation);
+    }
+}
+
+function addGarbage() {
+    for (let y = gridHeight - 1; y >= 10; y--) {
+        let air = floor(random(0, gridWidth));
+        for (let x = 0; x < gridWidth; x++) {
+            if (x != air) {
+                board[x][y] = "#595650";
+            }
+        }
     }
 }
 
