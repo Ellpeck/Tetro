@@ -78,8 +78,11 @@ const pieceZ = new Piece("#FF0000", 3, 2, [
 
 const gridWidth = 10;
 const gridHeight = 20;
+const menuOptions = 3;
 
 let isMainMenu;
+let selectedMenuOption;
+
 let isGameOver;
 let isPaused;
 
@@ -125,6 +128,7 @@ function calcRatios() {
 }
 
 function initMainMenu() {
+    selectedMenuOption = 0;
     isMainMenu = true;
     seed = undefined;
     killScreenEnabled = true;
@@ -171,19 +175,36 @@ function draw() {
         stroke(0);
         fill(0);
         textSize(scale * 0.5);
-        text("Definitely not a Tetris clone", width / 2 + scale, height / 4 + scale);
+        text("Totally not a Tetris clone", width / 2 + scale, height / 4 + scale);
 
-        let y = height / 3;
-        textSize(scale * 0.85);
-        text("Press Enter to play", width / 2, y += 2 * scale);
+        let spacing = scale * 1.5;
+        let y = height / 3 + 1.5 * spacing;
+        let leftX = width / 2 - gridWidth * 0.85 * scale;
+        let rightX = width / 2 + gridWidth * 0.85 * scale;
 
-        textSize(scale * 0.65);
-        text(seed ? ("Seed: " + seed) : "No seed", width / 2, y += 2 * scale);
-        text("Kill screen " + (killScreenEnabled ? "enabled" : "disabled"), width / 2, y += 0.8 * scale);
+        stroke(150);
+        fill(pieceL.color);
+        drawPiece(pieceL, rightX, y + spacing * selectedMenuOption, 1, scale / 2);
+        drawPiece(pieceL, leftX, y + scale / 3 + spacing * selectedMenuOption, 3, scale / 2);
 
-        textSize(scale * 0.75);
-        text("Press TAB to change kill screen", width / 2, y += 1.75 * scale);
-        text("Type numbers to input seed", width / 2, y += scale);
+        stroke(0);
+        fill(0);
+        textSize(scale * 1.25);
+        text("Play", width / 2, y);
+        textSize(scale);
+
+        let seedText = seed ? seed : (selectedMenuOption == 1 ? "(type numbers)" : "None");
+        drawMenuOption("Seed", seedText, leftX, rightX, y += spacing);
+        drawMenuOption("Kill Screen", killScreenEnabled ? "Enabled" : "Disabled", leftX, rightX, y += spacing);
+
+        y += spacing * 2;
+        textSize(scale * 0.5);
+        textAlign(CENTER, CENTER);
+        text("Arrow keys to navigate menu", width / 2, y += scale * 0.75);
+        text("Enter to select an option", width / 2, y += scale * 0.75);
+
+        textAlign(RIGHT, BOTTOM);
+        text("Created by Ellpeck", width - scale, height - scale);
         return;
     }
 
@@ -295,6 +316,13 @@ function draw() {
     text("TAB to hold", boardX - scale, y - scale * 0.75);
 }
 
+function drawMenuOption(left, right, leftX, rightX, y) {
+    textAlign(LEFT, TOP);
+    text(left, leftX, y);
+    textAlign(RIGHT, TOP);
+    text(right, rightX, y);
+}
+
 function drawPiece(piece, theX, theY, rotation, scale) {
     let w = piece.getWidth(rotation);
     let h = piece.getHeight(rotation);
@@ -311,21 +339,31 @@ function drawPiece(piece, theX, theY, rotation, scale) {
 
 function keyPressed() {
     if (isMainMenu) {
-        if (keyCode == ENTER) {
+        if (keyCode == DOWN_ARROW) {
+            selectedMenuOption++;
+            if (selectedMenuOption >= menuOptions)
+                selectedMenuOption = 0;
+        } else if (keyCode == UP_ARROW) {
+            selectedMenuOption--;
+            if (selectedMenuOption < 0)
+                selectedMenuOption = menuOptions - 1;
+        } else if (selectedMenuOption == 0 && keyCode == ENTER) {
             initGame();
-        } else if (keyCode == TAB) {
+        } else if (selectedMenuOption == 1) {
+            if (keyCode == BACKSPACE) {
+                if (seed)
+                    seed = seed.substring(0, seed.length - 1);
+            } else if (int(key) >= 0 && int(key) <= 9) {
+                if (!seed)
+                    seed = "";
+                seed += key;
+            }
+        } else if (selectedMenuOption == 2 && keyCode == LEFT_ARROW || keyCode == RIGHT_ARROW || keyCode == ENTER) {
             killScreenEnabled = !killScreenEnabled;
-            return false;
-        } else if (keyCode == BACKSPACE) {
-            if (seed)
-                seed = seed.substring(0, seed.length - 1);
-        } else if (key >= 0 && key <= 9) {
-            if (!seed)
-                seed = "";
-            seed += key;
         }
         return;
     }
+
     if (!isGameOver) {
         if (keyCode == ESCAPE) {
             isPaused = !isPaused;
