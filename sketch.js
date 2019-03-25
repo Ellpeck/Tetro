@@ -55,6 +55,8 @@ class Design {
     }
 }
 
+const gameModes = ["Normal", "Cleanup"];
+
 const designs = [
     new Design("Vibrant", ["#969696", "#7777FF", "#0000FF", "#FF7700", "#DDDD00", "#00FF00", "#7700FF", "#FF0000"]),
     new Design("Grayscale", ["#000000", "#727272", "#727272", "#565656", "#727272", "#565656", "#727272", "#565656"]),
@@ -93,11 +95,12 @@ const pieceZ = new Piece(7, 3, 2, [
 
 const gridWidth = 10;
 const gridHeight = 22;
-const menuOptions = 4;
+const menuOptions = 5;
 
 let isMainMenu;
 let selectedMenuOption;
 let selectedDesign;
+let selectedGameMode;
 
 let isGameOver;
 let isPaused;
@@ -148,6 +151,7 @@ function calcRatios() {
 
 function initMainMenu() {
     selectedMenuOption = 0;
+    selectedGameMode = 0;
     isMainMenu = true;
     seed = undefined;
     killScreenEnabled = true;
@@ -160,17 +164,38 @@ function initGame() {
     isGameOver = false;
     isPaused = false;
     holdPiece = undefined;
+    clearedRows = 0;
+    currentPoints = 0;
+    turnMultiplier = 0
+    level = 1;;
     pieceQueue = [];
     messageQueue = [];
-    level = 1;
     board = [];
     for (let i = 0; i < gridWidth; i++)
         board[i] = [];
+
+    if (selectedGameMode == 1)
+        addClutter();
+
     selectNewPiece(getPieceFromQueue());
     lastUpdateMillis = millis();
-    clearedRows = 0;
-    currentPoints = 0;
-    turnMultiplier = 0;
+}
+
+function addClutter() {
+    while (true) {
+        let piece = getPieceFromQueue();
+        let rotation = floor(random(0, 3));
+        let width = piece.getWidth(rotation);
+        let x = floor(random(floor(width / 2), floor(gridWidth - width / 2)));
+
+        let y = 1;
+        while (isValidPosition(piece, x, y + 1, rotation)) {
+            y++;
+        }
+        if (y <= 8)
+            break;
+        placePiece(x, y, piece, rotation);
+    }
 }
 
 function draw() {
@@ -212,7 +237,8 @@ function draw() {
         text("Play", width / 2, y);
         textSize(scale);
 
-        let seedText = seed ? seed : (selectedMenuOption == 1 ? "(type numbers)" : "None");
+        drawMenuOption("Game Mode", gameModes[selectedGameMode], leftX, rightX, y += spacing);
+        let seedText = seed ? seed : (selectedMenuOption == 2 ? "(type numbers)" : "None");
         drawMenuOption("Seed", seedText, leftX, rightX, y += spacing);
         drawMenuOption("Kill Screen", killScreenEnabled ? "Enabled" : "Disabled", leftX, rightX, y += spacing);
         drawMenuOption("Design", designs[selectedDesign].name, leftX, rightX, y += spacing);
@@ -386,6 +412,16 @@ function keyPressed() {
         } else if (selectedMenuOption == 0 && keyCode == ENTER) {
             initGame();
         } else if (selectedMenuOption == 1) {
+            if (keyCode == LEFT_ARROW) {
+                selectedGameMode--;
+                if (selectedGameMode < 0)
+                    selectedGameMode = gameModes.length - 1;
+            } else if (keyCode == RIGHT_ARROW) {
+                selectedGameMode++;
+                if (selectedGameMode >= gameModes.length)
+                    selectedGameMode = 0;
+            }
+        } else if (selectedMenuOption == 2) {
             if (keyCode == BACKSPACE) {
                 if (seed)
                     seed = seed.substring(0, seed.length - 1);
@@ -394,9 +430,9 @@ function keyPressed() {
                     seed = "";
                 seed += key;
             }
-        } else if (selectedMenuOption == 2 && (keyCode == LEFT_ARROW || keyCode == RIGHT_ARROW || keyCode == ENTER)) {
+        } else if (selectedMenuOption == 3 && (keyCode == LEFT_ARROW || keyCode == RIGHT_ARROW || keyCode == ENTER)) {
             killScreenEnabled = !killScreenEnabled;
-        } else if (selectedMenuOption == 3) {
+        } else if (selectedMenuOption == 4) {
             if (keyCode == LEFT_ARROW) {
                 selectedDesign--;
                 if (selectedDesign < 0)
@@ -479,7 +515,7 @@ function movePiece(xOff, yOff) {
     let newY = currY + yOff;
     if (!isValidPosition(currPiece, newX, newY, currRotation)) {
         if (yOff > 0) {
-            placeCurrPiece();
+            placePiece(currX, currY, currPiece, currRotation);
             clearRows();
             selectNewPiece(getPieceFromQueue());
         }
@@ -490,14 +526,14 @@ function movePiece(xOff, yOff) {
     return true;
 }
 
-function placeCurrPiece() {
-    let w = currPiece.getWidth(currRotation);
-    let h = currPiece.getHeight(currRotation);
+function placePiece(theX, theY, piece, rotation) {
+    let w = piece.getWidth(rotation);
+    let h = piece.getHeight(rotation);
     for (let x = 0; x < w; x++) {
         for (let y = 0; y < h; y++) {
-            if (!currPiece.hasTile(x, y, currRotation))
+            if (!piece.hasTile(x, y, rotation))
                 continue;
-            board[currX - floor(w / 2) + x][currY - floor(h / 2) + y] = currentColors()[currPiece.color];
+            board[theX - floor(w / 2) + x][theY - floor(h / 2) + y] = currentColors()[piece.color];
         }
     }
 }
