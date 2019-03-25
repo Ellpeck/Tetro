@@ -78,11 +78,17 @@ const pieceZ = new Piece("#FF0000", 3, 2, [
 
 const gridWidth = 10;
 const gridHeight = 20;
+
+let isMainMenu;
+let isGameOver;
+let isPaused;
+
 let board;
-
 let displayRatio;
+let seed;
+let killScreenEnabled;
 
-let pieceQueue = [];
+let pieceQueue;
 let currPiece;
 let currX;
 let currY;
@@ -93,8 +99,6 @@ let holdPiece;
 let isSwitchedPiece;
 
 let lastUpdateMillis;
-let isGameOver;
-let isPaused;
 let level;
 
 let highestPoints;
@@ -102,14 +106,14 @@ let clearedRows;
 let currentPoints;
 let turnMultiplier;
 
-let messageQueue = [];
+let messageQueue;
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
     frameRate(30);
 
-    initGame();
     calcRatios();
+    initMainMenu();
 
     highestPoints = getCookie("highscore");
     if (!highestPoints)
@@ -120,9 +124,21 @@ function calcRatios() {
     displayRatio = min(windowWidth / (gridWidth * 2.5), windowHeight / (gridHeight + 2));
 }
 
+function initMainMenu() {
+    isMainMenu = true;
+    seed = undefined;
+    killScreenEnabled = true;
+}
+
 function initGame() {
+    if (seed)
+        randomSeed(seed);
+    isMainMenu = false;
     isGameOver = false;
+    isPaused = false;
     holdPiece = undefined;
+    pieceQueue = [];
+    messageQueue = [];
     level = 1;
     board = [];
     for (let i = 0; i < gridWidth; i++)
@@ -140,6 +156,33 @@ function draw() {
     let boardX = windowWidth / 2 - (gridWidth / 2) * displayRatio;
     let boardY = windowHeight / 2 - (gridHeight / 2) * displayRatio;
     let scale = displayRatio;
+
+    if (isMainMenu) {
+        stroke(0);
+        fill(0);
+        textAlign(CENTER, CENTER);
+        textSize(scale * 2);
+        let s = "Tetro";
+        text(s, width / 2, height / 4);
+        stroke(150);
+        fill(pieceT.color);
+        drawPiece(pieceT, width / 2 + textWidth(s) - scale, height / 4 - scale * 2, 1, scale);
+
+        let y = height / 3;
+        stroke(0);
+        fill(0);
+        textSize(scale * 0.85);
+        text("Press Enter to play", width / 2, y += 1.25 * scale);
+
+        textSize(scale * 0.65);
+        text(seed ? ("Seed: " + seed) : "No seed", width / 2, y += 2 * scale);
+        text("Kill screen " + (killScreenEnabled ? "enabled" : "disabled"), width / 2, y += 0.8 * scale);
+
+        textSize(scale * 0.75);
+        text("Press TAB to change kill screen", width / 2, y += 1.75 * scale);
+        text("Type numbers to input seed", width / 2, y += scale);
+        return;
+    }
 
     stroke(150);
     for (let x = 0; x < gridWidth; x++) {
@@ -217,28 +260,24 @@ function draw() {
 
         if (!isPaused) {
             let speedFactor = 1 - (level - 1) * 0.05;
+            if (!killScreenEnabled && speedFactor < 0.2)
+                speedFactor = 0.2;
             let now = millis();
             if (now - lastUpdateMillis >= 1000 * speedFactor) {
                 lastUpdateMillis = now;
                 movePiece(0, 1);
             }
         }
-    } else {
-        stroke(0);
-        fill(0);
-        textAlign(CENTER, CENTER);
-        textSize(scale * 2);
-        text("Game Over", width / 2, height / 3);
-        textSize(scale * 0.75);
-        text("Press Enter to restart", width / 2, height / 3 + 1.5 * scale);
     }
 
-    if (isPaused) {
+    if (isGameOver || isPaused) {
         stroke(0);
         fill(0);
         textAlign(CENTER, CENTER);
         textSize(scale * 2);
-        text("Paused", width / 2, height / 3);
+        text(isPaused ? "Paused" : "Game Over", width / 2, height / 3);
+        textSize(scale * 0.75);
+        text("Press Enter to quit", width / 2, height / 3 + 1.5 * scale);
     }
 
     stroke(0);
@@ -246,7 +285,7 @@ function draw() {
     textAlign(RIGHT, BOTTOM);
     let y = boardY + gridHeight * displayRatio;
     textSize(0.5 * scale);
-    text("ESC to pause", boardX - scale, y - scale * 3.75);
+    text("ESC to " + (isPaused ? "unpause" : "pause"), boardX - scale, y - scale * 3.75);
     text("Arrow keys to move", boardX - scale, y - scale * 3);
     text("Q, E to rotate", boardX - scale, y - scale * 2.25);
     text("Space to drop", boardX - scale, y - scale * 1.5);
@@ -268,9 +307,29 @@ function drawPiece(piece, theX, theY, rotation, scale) {
 }
 
 function keyPressed() {
+    if (isMainMenu) {
+        if (keyCode == ENTER) {
+            initGame();
+        } else if (keyCode == TAB) {
+            killScreenEnabled = !killScreenEnabled;
+            return false;
+        } else if (keyCode == BACKSPACE) {
+            if (seed)
+                seed = seed.substring(0, seed.length - 1);
+        } else if (key >= 0 && key <= 9) {
+            if (!seed)
+                seed = "";
+            seed += key;
+        }
+        return;
+    }
     if (!isGameOver) {
         if (keyCode == ESCAPE) {
             isPaused = !isPaused;
+        } else if (isPaused) {
+            if (keyCode == ENTER) {
+                initMainMenu();
+            }
         } else if (!isPaused) {
             if (keyCode == LEFT_ARROW) {
                 movePiece(-1, 0);
@@ -303,7 +362,7 @@ function keyPressed() {
         }
     } else {
         if (keyCode == ENTER) {
-            initGame();
+            initMainMenu();
         }
     }
 }
@@ -429,21 +488,6 @@ function clearRows() {
 }
 
 function awardPoints(rowsCleared) {
-    if (rowsCleared <= 0)
-        turnMultiplier = 0;
-    else
-        turnMultiplier++;
-
-    let points = 500 * rowsCleared * rowsCleared + (2000 * turnMultiplier);
-    currentPoints += points;
-
-    let newTotal = clearedRows + rowsCleared;
-    if (floor(newTotal / 5) != floor(clearedRows / 5)) {
-        level++;
-        messageQueue.push(new Message("#2c89f4", "Level Up!"));
-    }
-    clearedRows = newTotal;
-
     if (rowsCleared >= 4) {
         messageQueue.push(new Message("#09c600", "Tetro!"));
     } else if (rowsCleared >= 3) {
@@ -451,12 +495,31 @@ function awardPoints(rowsCleared) {
     } else if (rowsCleared >= 2) {
         messageQueue.push(new Message(0, "Double Clear!"));
     }
+
+    if (rowsCleared <= 0)
+        turnMultiplier = 0;
+    else
+        turnMultiplier++;
+
+    let points = 500 * rowsCleared * rowsCleared + (2000 * turnMultiplier);
+    let newPoints = currentPoints + points;
+    if (currentPoints <= highestPoints && newPoints > highestPoints) {
+        messageQueue.push(new Message("#ff7905", "New Highscore!"));
+    }
+    currentPoints = newPoints;
+
+    let newTotal = clearedRows + rowsCleared;
+    if (floor(newTotal / 5) != floor(clearedRows / 5)) {
+        level++;
+        messageQueue.push(new Message("#2c89f4", "Level Up!"));
+    }
+    clearedRows = newTotal;
 }
 
 function getPieceFromQueue() {
     while (pieceQueue.length <= 7) {
         let pieces = [pieceI, pieceJ, pieceL, pieceO, pieceS, pieceT, pieceZ];
-        pieces.sort(() => Math.random() - 0.5);
+        pieces.sort(() => random() - 0.5);
         pieceQueue = pieceQueue.concat(pieces);
     }
     return pieceQueue.shift();
