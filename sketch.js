@@ -545,10 +545,29 @@ function rotatePiece(rotation) {
     else if (newRotation < 0)
         newRotation = 3;
     if (!isValidPosition(currPiece, currX, currY, newRotation)) {
-        return;
+        let kicks = [];
+        let w = floor(currPiece.getWidth(newRotation) / 2);
+        for (let x = -w; x <= w; x++) {
+            if (x != 0)
+                kicks.push([x, 0]);
+        }
+        let h = floor(currPiece.getHeight(newRotation) / 2);
+        for (let y = -h; y <= h; y++) {
+            if (y != 0)
+                kicks.push([0, y]);
+        }
+        kicks.sort((a, b) => (abs(a[0]) + abs(a[1])) - (abs(b[0]) + abs(b[1])));
+        for (kick of kicks) {
+            if (isValidPosition(currPiece, currX + kick[0], currY + kick[1], newRotation)) {
+                currX += kick[0];
+                currY += kick[1];
+                currRotation = newRotation;
+                break;
+            }
+        }
+    } else {
+        currRotation = newRotation;
     }
-    currRotation = newRotation;
-    console.log(currRotation);
 }
 
 function movePiece(xOff, yOff) {
