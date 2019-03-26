@@ -269,7 +269,7 @@ function draw() {
         setOutlineColor();
         fill(currentColors()[pieceL.color]);
         drawPiece(pieceL, rightX, y + spacing * selectedMenuOption, 1, scale / 2);
-        drawPiece(pieceL, leftX, y + scale / 3 + spacing * selectedMenuOption, 3, scale / 2);
+        drawPiece(pieceL, leftX - scale / 2, y + scale / 3 + spacing * selectedMenuOption, 3, scale / 2);
 
         stroke(0);
         fill(0);
