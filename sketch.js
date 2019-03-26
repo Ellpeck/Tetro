@@ -55,7 +55,7 @@ class Design {
     }
 }
 
-const gameModes = ["Normal", "Cleanup", "Garbage Removal"];
+const gameModes = ["Normal", "Cleanup", "Garbage Removal", "Expanse"];
 
 const designs = [
     new Design("Vibrant", ["#969696", "#7777FF", "#0000FF", "#FF7700", "#DDDD00", "#00FF00", "#7700FF", "#FF0000"]),
@@ -93,9 +93,9 @@ const pieceZ = new Piece(7, 3, 2, [
     [false, true, true]
 ]);
 
-const gridWidth = 10;
-const gridHeight = 22;
 const menuOptions = 5;
+let gridWidth;
+let gridHeight;
 
 let isMainMenu;
 let selectedMenuOption;
@@ -134,7 +134,6 @@ function setup() {
     createCanvas(windowWidth, windowHeight);
     frameRate(30);
 
-    calcRatios();
     initMainMenu();
 
     highestPoints = getCookie("highscore");
@@ -150,6 +149,9 @@ function calcRatios() {
 }
 
 function initMainMenu() {
+    gridWidth = 10;
+    gridHeight = 22;
+    calcRatios();
     selectedMenuOption = 0;
     selectedGameMode = 0;
     isMainMenu = true;
@@ -549,6 +551,18 @@ function placePiece(theX, theY, piece, rotation) {
             board[theX - floor(w / 2) + x][theY - floor(h / 2) + y] = currentColors()[piece.color];
         }
     }
+
+    if (selectedGameMode == 3) {
+        if (theY <= 6 && gridHeight < 52) {
+            gridHeight += h;
+            calcRatios();
+
+            let rowsToMove = [];
+            for (let i = 1; i <= h; i++)
+                rowsToMove.push(gridHeight - i);
+            moveRowsDown(rowsToMove);
+        }
+    }
 }
 
 function selectNewPiece(piece) {
@@ -616,14 +630,18 @@ function clearRows() {
             cleared.push(y);
         }
     }
-    for (let i = cleared.length - 1; i >= 0; i--) {
-        for (let y = cleared[i] - 1; y >= 0; y--) {
+    moveRowsDown(cleared);
+    awardPoints(cleared.length);
+}
+
+function moveRowsDown(rows) {
+    for (let i = rows.length - 1; i >= 0; i--) {
+        for (let y = rows[i] - 1; y >= 0; y--) {
             for (let x = 0; x < gridWidth; x++) {
                 board[x][y + 1] = board[x][y];
             }
         }
     }
-    awardPoints(cleared.length);
 }
 
 function awardPoints(rowsCleared) {
