@@ -1,8 +1,9 @@
 class Piece {
-    constructor(color, width, height, tiles) {
+    constructor(color, width, height, centers, tiles) {
         this.color = color;
         this.width = width;
         this.height = height;
+        this.centers = centers;
         this.tiles = tiles;
     }
 
@@ -18,6 +19,14 @@ class Piece {
             return this.width;
         else
             return this.height;
+    }
+
+    getCenterX(rotation) {
+        return this.centers[rotation][0];
+    }
+
+    getCenterY(rotation) {
+        return this.centers[rotation][1];
     }
 
     hasTile(x, y, rotation) {
@@ -65,30 +74,46 @@ const designs = [
     new Design("Pastel", ["#969696", "#fea3aa", "#f8b88b", "#faf884", "#baed91", "#b2cefe", "#f2a2e8", "#faf884"])
 ];
 
+const defaultCenters = [
+    [1, 1],
+    [1, 1],
+    [1, 0],
+    [0, 1]
+];
 const pieceI = new Piece(1, 4, 1, [
+    [1, 0],
+    [-1, 1],
+    [1, -1],
+    [0, 1]
+], [
     [true, true, true, true]
 ]);
-const pieceJ = new Piece(2, 3, 2, [
+const pieceJ = new Piece(2, 3, 2, defaultCenters, [
     [true, false, false],
     [true, true, true]
 ]);
-const pieceL = new Piece(3, 3, 2, [
+const pieceL = new Piece(3, 3, 2, defaultCenters, [
     [false, false, true],
     [true, true, true]
 ]);
 const pieceO = new Piece(4, 2, 2, [
+    [1, 1],
+    [1, 1],
+    [1, 1],
+    [1, 1]
+], [
     [true, true],
     [true, true]
 ]);
-const pieceS = new Piece(5, 3, 2, [
+const pieceS = new Piece(5, 3, 2, defaultCenters, [
     [false, true, true],
     [true, true, false]
 ]);
-const pieceT = new Piece(6, 3, 2, [
+const pieceT = new Piece(6, 3, 2, defaultCenters, [
     [false, true, false],
     [true, true, true]
 ]);
-const pieceZ = new Piece(7, 3, 2, [
+const pieceZ = new Piece(7, 3, 2, defaultCenters, [
     [true, true, false],
     [false, true, true]
 ]);
@@ -403,11 +428,11 @@ function drawMenuOption(left, right, leftX, rightX, y) {
 function drawPiece(piece, theX, theY, rotation, scale, logicalY) {
     let w = piece.getWidth(rotation);
     let h = piece.getHeight(rotation);
-    let startX = theX - floor(w / 2) * scale;
-    let startY = theY - floor(h / 2) * scale;
+    let startX = theX - piece.getCenterX(rotation) * scale;
+    let startY = theY - piece.getCenterY(rotation) * scale;
     for (let x = 0; x < w; x++) {
         for (let y = 0; y < h; y++) {
-            if (piece.hasTile(x, y, rotation) && (logicalY == undefined || logicalY - floor(h / 2) + y >= 0)) {
+            if (piece.hasTile(x, y, rotation) && (logicalY == undefined || logicalY - piece.getCenterY(rotation) + y >= 0)) {
                 rect(startX + x * scale, startY + y * scale, scale, scale);
             }
         }
@@ -523,6 +548,7 @@ function rotatePiece(rotation) {
         return;
     }
     currRotation = newRotation;
+    console.log(currRotation);
 }
 
 function movePiece(xOff, yOff) {
@@ -548,7 +574,7 @@ function placePiece(theX, theY, piece, rotation) {
         for (let y = 0; y < h; y++) {
             if (!piece.hasTile(x, y, rotation))
                 continue;
-            board[theX - floor(w / 2) + x][theY - floor(h / 2) + y] = currentColors()[piece.color];
+            board[theX - piece.getCenterX(rotation) + x][theY - piece.getCenterY(rotation) + y] = currentColors()[piece.color];
         }
     }
 
@@ -603,8 +629,8 @@ function isValidPosition(piece, x, y, rotation) {
         for (let yOff = 0; yOff < h; yOff++) {
             if (!piece.hasTile(xOff, yOff, rotation))
                 continue;
-            let newX = x - floor(w / 2) + xOff;
-            let newY = y - floor(h / 2) + yOff;
+            let newX = x - piece.getCenterX(rotation) + xOff;
+            let newY = y - piece.getCenterY(rotation) + yOff;
             if (newX < 0)
                 return false;
             if (newX >= gridWidth || newY >= gridHeight)
