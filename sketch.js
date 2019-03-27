@@ -546,15 +546,15 @@ function rotatePiece(rotation) {
         newRotation = 3;
     if (!isValidPosition(currPiece, currX, currY, newRotation)) {
         let kicks = [];
-        let w = floor(currPiece.getWidth(newRotation) / 2);
-        for (let x = -w; x <= w; x++) {
-            if (x != 0)
-                kicks.push([x, 0]);
-        }
         let h = floor(currPiece.getHeight(newRotation) / 2);
-        for (let y = -h; y <= h; y++) {
+        for (let y = h; y >= -h; y--) {
             if (y != 0)
                 kicks.push([0, y]);
+        }
+        let w = floor(currPiece.getWidth(newRotation) / 2);
+        for (let x = w; x >= -w; x--) {
+            if (x != 0)
+                kicks.push([x, 0]);
         }
         kicks.sort((a, b) => (abs(a[0]) + abs(a[1])) - (abs(b[0]) + abs(b[1])));
         for (kick of kicks) {
