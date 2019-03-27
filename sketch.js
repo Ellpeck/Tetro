@@ -66,12 +66,16 @@ class Design {
 
 const gameModes = ["Normal", "Cleanup", "Garbage Removal", "Expanse", "Australian"];
 
+const vibrantColors = ["#7777FF", "#0000FF", "#FF7700", "#DDDD00", "#00FF00", "#7700FF", "#FF0000"];
+const googleColors = ["#008744", "#0057e7", "#d62d20", "#ffa700", "#008744", "#0057e7", "#d62d20"];
 const designs = [
-    new Design("Vibrant", ["#969696", "#7777FF", "#0000FF", "#FF7700", "#DDDD00", "#00FF00", "#7700FF", "#FF0000"]),
+    new Design("Vibrant", ["#969696"].concat(vibrantColors)),
     new Design("Grayscale", ["#000000", "#727272", "#727272", "#565656", "#727272", "#565656", "#727272", "#565656"]),
-    new Design("Google", ["#FFFFFF", "#008744", "#0057e7", "#d62d20", "#ffa700", "#008744", "#0057e7", "#d62d20"]),
+    new Design("Google", ["#FFFFFF"].concat(googleColors)),
     new Design("No Outlines", [undefined, "#7777FF", "#0000FF", "#FF7700", "#DDDD00", "#00FF00", "#7700FF", "#FF0000"]),
-    new Design("Pastel", ["#969696", "#fea3aa", "#f8b88b", "#faf884", "#baed91", "#b2cefe", "#f2a2e8", "#faf884"])
+    new Design("Pastel", ["#969696", "#fea3aa", "#f8b88b", "#faf884", "#baed91", "#b2cefe", "#f2a2e8", "#faf884"]),
+    new Design("Vibrant Dark", ["#282828"].concat(vibrantColors).concat("#383838", "#606060", "#FFFFFF")),
+    new Design("Google Dark", ["#282828"].concat(googleColors).concat("#383838", "#606060", "#FFFFFF"))
 ];
 
 const defaultCenters = [
@@ -239,15 +243,15 @@ function addGarbage() {
 }
 
 function draw() {
-    background(255);
+    let colors = currentColors();
+    background(colors.length > 8 ? colors[8] : 255);
 
     let boardX = windowWidth / 2 - (gridWidth / 2) * displayRatio;
     let boardY = windowHeight / 2 - (gridHeight / 2) * displayRatio;
     let scale = displayRatio;
 
     if (isMainMenu) {
-        stroke(0);
-        fill(0);
+        setTextColor();
         textAlign(CENTER, CENTER);
         textSize(scale * 2);
         let s = "Tetro";
@@ -256,8 +260,7 @@ function draw() {
         fill(currentColors()[pieceT.color]);
         drawPiece(pieceT, width / 2 + textWidth(s) - scale, height / 4 - scale * 2, 1, scale);
 
-        stroke(0);
-        fill(0);
+        setTextColor();
         textSize(scale * 0.5);
         text("Totally not a Tetris clone", width / 2 + scale, height / 4 + scale);
 
@@ -271,8 +274,7 @@ function draw() {
         drawPiece(pieceL, rightX, y + spacing * selectedMenuOption, 1, scale / 2);
         drawPiece(pieceL, leftX - scale / 2, y + scale / 3 + spacing * selectedMenuOption, 3, scale / 2);
 
-        stroke(0);
-        fill(0);
+        setTextColor();
         textSize(scale * 1.25);
         text("Play", width / 2, y);
         textSize(scale);
@@ -298,7 +300,7 @@ function draw() {
     for (let x = 0; x < gridWidth; x++) {
         for (let y = 0; y < gridHeight; y++) {
             let field = board[x][y];
-            fill(!field || isPaused ? 225 : field);
+            fill(!field || isPaused ? (colors.length > 9 ? colors[9] : 225) : field);
 
             let theY = boardY + y * scale;
             if (selectedGameMode == 4)
@@ -313,8 +315,7 @@ function draw() {
     line(boardX, lineY, boardX + gridWidth * scale, lineY);
     strokeWeight(1);
 
-    stroke(0);
-    fill(0);
+    setTextColor();
     textAlign(LEFT, TOP);
     textSize(scale);
     let sc = "Score: " + currentPoints;
@@ -331,7 +332,7 @@ function draw() {
     if (!isGameOver) {
         if (!isPaused) {
             setOutlineColor();
-            let color = currentColors()[currPiece.color];
+            let color = colors[currPiece.color];
             fill(color);
             drawPiece(currPiece, boardX + currX * scale, boardY + currY * scale, currRotation, scale, currY);
 
@@ -340,8 +341,7 @@ function draw() {
             drawPiece(currPiece, boardX + currX * scale, boardY + previewY * scale, currRotation, scale, previewY);
         }
 
-        stroke(0);
-        fill(0);
+        setTextColor();
         textAlign(LEFT, TOP);
         textSize(scale * 0.75);
         text("Next Pieces", boardX + (gridWidth + 1) * scale, boardY + scale);
@@ -352,14 +352,14 @@ function draw() {
         if (!isPaused) {
             setOutlineColor();
             for (let i = 0; i < 5; i++) {
-                fill(currentColors()[pieceQueue[i].color]);
+                fill(colors[pieceQueue[i].color]);
                 drawPiece(pieceQueue[i], boardX + (gridWidth + 2) * scale, boardY + scale + 2 * (i + 1) * scale, 0, queueScale);
             }
         }
 
         if (holdPiece) {
             setOutlineColor();
-            fill(currentColors()[holdPiece.color]);
+            fill(colors[holdPiece.color]);
             drawPiece(holdPiece, boardX - 2 * scale, boardY + 3 * scale, 0, queueScale);
         }
 
@@ -367,10 +367,13 @@ function draw() {
         let y = boardY + gridHeight * displayRatio - messageScale * (messageQueue.length + 1);
         textAlign(LEFT, TOP);
         textSize(messageScale * 0.8);
+        noStroke();
         for (let i = messageQueue.length - 1; i >= 0; i--) {
             let message = messageQueue[i];
-            stroke(message.color);
-            fill(message.color);
+            if (!message.color)
+                setTextColor();
+            else
+                fill(message.color);
             text(message.text, boardX + gridWidth * displayRatio + scale, y);
             y += messageScale;
 
@@ -392,8 +395,7 @@ function draw() {
     }
 
     if (isGameOver || isPaused) {
-        stroke(0);
-        fill(0);
+        setTextColor();
         textAlign(CENTER, CENTER);
         textSize(scale * 2);
         text(isPaused ? "Paused" : "Game Over", width / 2, height / 3);
@@ -401,8 +403,7 @@ function draw() {
         text("Press Enter to quit", width / 2, height / 3 + 1.5 * scale);
     }
 
-    stroke(0);
-    fill(0);
+    setTextColor();
     textAlign(RIGHT, BOTTOM);
     let y = boardY + gridHeight * displayRatio;
     textSize(0.5 * scale);
@@ -423,6 +424,12 @@ function setOutlineColor() {
         stroke(color);
     else
         noStroke();
+}
+
+function setTextColor() {
+    noStroke();
+    let colors = currentColors();
+    fill(colors.length > 10 ? colors[10] : 0);
 }
 
 function drawMenuOption(left, right, leftX, rightX, y) {
@@ -703,9 +710,9 @@ function awardPoints(rowsCleared) {
     if (rowsCleared >= 4) {
         messageQueue.push(new Message("#09c600", "Tetro!"));
     } else if (rowsCleared >= 3) {
-        messageQueue.push(new Message(0, "Triple Clear!"));
+        messageQueue.push(new Message(undefined, "Triple Clear!"));
     } else if (rowsCleared >= 2) {
-        messageQueue.push(new Message(0, "Double Clear!"));
+        messageQueue.push(new Message(undefined, "Double Clear!"));
     }
 
     if (rowsCleared <= 0)
