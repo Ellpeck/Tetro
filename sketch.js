@@ -64,7 +64,7 @@ class Design {
     }
 }
 
-const gameModes = ["Normal", "Cleanup", "Garbage Removal", "Expanse"];
+const gameModes = ["Normal", "Cleanup", "Garbage Removal", "Expanse", "Australian"];
 
 const designs = [
     new Design("Vibrant", ["#969696", "#7777FF", "#0000FF", "#FF7700", "#DDDD00", "#00FF00", "#7700FF", "#FF0000"]),
@@ -299,11 +299,18 @@ function draw() {
         for (let y = 0; y < gridHeight; y++) {
             let field = board[x][y];
             fill(!field || isPaused ? 225 : field);
-            rect(boardX + x * scale, boardY + y * scale, scale, scale);
+
+            let theY = boardY + y * scale;
+            if (selectedGameMode == 4)
+                theY = (gridHeight + 1) * scale - theY;
+            rect(boardX + x * scale, theY, scale, scale);
         }
     }
     strokeWeight(4);
-    line(boardX, boardY + 2 * scale, boardX + gridWidth * scale, boardY + 2 * scale);
+    let lineY = boardY + 2 * scale;
+    if (selectedGameMode == 4)
+        lineY = (gridHeight + 2) * scale - lineY;
+    line(boardX, lineY, boardX + gridWidth * scale, lineY);
     strokeWeight(1);
 
     stroke(0);
@@ -433,7 +440,10 @@ function drawPiece(piece, theX, theY, rotation, scale, logicalY) {
     for (let x = 0; x < w; x++) {
         for (let y = 0; y < h; y++) {
             if (piece.hasTile(x, y, rotation) && (logicalY == undefined || logicalY - piece.getCenterY(rotation) + y >= 0)) {
-                rect(startX + x * scale, startY + y * scale, scale, scale);
+                let theY = startY + y * scale;
+                if (logicalY != undefined && selectedGameMode == 4)
+                    theY = (gridHeight + 1) * scale - theY;
+                rect(startX + x * scale, theY, scale, scale);
             }
         }
     }
