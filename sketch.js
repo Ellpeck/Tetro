@@ -149,8 +149,10 @@ let currRotation;
 let holdPiece;
 let isSwitchedPiece;
 
-let lastUpdateMillis;
+let lastDropMillis;
+let lastTimerMillis;
 let level;
+let playingTime;
 
 let highestPoints;
 let clearedRows;
@@ -198,6 +200,7 @@ function initGame() {
     clearedRows = 0;
     currentPoints = 0;
     turnMultiplier = 0
+    playingTime = 0;
     level = 1;;
     pieceQueue = [];
     messageQueue = [];
@@ -211,7 +214,10 @@ function initGame() {
         addGarbage();
 
     selectNewPiece(getPieceFromQueue());
-    lastUpdateMillis = millis();
+
+    let now = millis();
+    lastDropMillis = now;
+    lastTimerMillis = now;
 }
 
 function addClutter() {
@@ -329,6 +335,11 @@ function draw() {
     text("Rows Cleared: " + clearedRows, boardX - displayRatio, boardY + 8 * displayRatio);
     text("Level " + level, boardX - displayRatio, boardY + 9 * displayRatio);
 
+    let minutes = ("0" + floor((playingTime % (1000 * 60 * 60)) / (1000 * 60))).slice(-2);
+    let seconds = ("0" + floor((playingTime % (1000 * 60)) / 1000)).slice(-2);
+    let milliseconds = ("00" + floor(playingTime % 1000)).slice(-3);
+    text(minutes + ":" + seconds + "." + milliseconds, boardX - displayRatio, boardY + 11 * displayRatio);
+
     if (!isGameOver) {
         if (!isPaused) {
             setOutlineColor();
@@ -387,10 +398,12 @@ function draw() {
             if (!killScreenEnabled && speedFactor < 0.2)
                 speedFactor = 0.2;
             let now = millis();
-            if (now - lastUpdateMillis >= 1000 * speedFactor) {
-                lastUpdateMillis = now;
+            if (now - lastDropMillis >= 1000 * speedFactor) {
+                lastDropMillis = now;
                 movePiece(0, 1);
             }
+            playingTime += (now - lastTimerMillis);
+            lastTimerMillis = now;
         }
     }
 
