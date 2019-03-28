@@ -65,6 +65,7 @@ class Design {
 }
 
 const gameModes = ["Normal", "Cleanup", "Garbage Removal", "Expanse", "Australian"];
+const winConditions = ["Endless", "40 Rows", "150 Rows"];
 
 const vibrantColors = ["#7777FF", "#0000FF", "#FF7700", "#DDDD00", "#00FF00", "#7700FF", "#FF0000"];
 const googleColors = ["#008744", "#0057e7", "#d62d20", "#ffa700", "#008744", "#0057e7", "#d62d20"];
@@ -122,7 +123,7 @@ const pieceZ = new Piece(7, 3, 2, defaultCenters, [
     [false, true, true]
 ]);
 
-const menuOptions = 5;
+const menuOptions = 6;
 let gridWidth;
 let gridHeight;
 
@@ -130,8 +131,10 @@ let isMainMenu;
 let selectedMenuOption;
 let selectedDesign;
 let selectedGameMode;
+let selectedWinCondition;
 
 let isGameOver;
+let hasWon;
 let isPaused;
 
 let board;
@@ -185,6 +188,7 @@ function initMainMenu() {
     calcRatios();
     selectedMenuOption = 0;
     selectedGameMode = 0;
+    selectedWinCondition = 0;
     isMainMenu = true;
     seed = undefined;
     killScreenEnabled = true;
@@ -195,6 +199,7 @@ function initGame() {
         randomSeed(seed);
     isMainMenu = false;
     isGameOver = false;
+    hasWon = false;
     isPaused = false;
     holdPiece = undefined;
     clearedRows = 0;
@@ -286,7 +291,8 @@ function draw() {
         textSize(scale);
 
         drawMenuOption("Game Mode", gameModes[selectedGameMode], leftX, rightX, y += spacing);
-        let seedText = seed ? seed : (selectedMenuOption == 2 ? "(type numbers)" : "None");
+        drawMenuOption("Win Condition", winConditions[selectedWinCondition], leftX, rightX, y += spacing);
+        let seedText = seed ? seed : (selectedMenuOption == 3 ? "(type numbers)" : "None");
         drawMenuOption("Seed", seedText, leftX, rightX, y += spacing);
         drawMenuOption("Kill Screen", killScreenEnabled ? "Enabled" : "Disabled", leftX, rightX, y += spacing);
         drawMenuOption("Design", designs[selectedDesign].name, leftX, rightX, y += spacing);
@@ -411,7 +417,7 @@ function draw() {
         setTextColor();
         textAlign(CENTER, CENTER);
         textSize(scale * 2);
-        text(isPaused ? "Paused" : "Game Over", width / 2, height / 3);
+        text(isPaused ? "Paused" : (hasWon ? "You won!" : "Game Over"), width / 2, height / 3);
         textSize(scale * 0.75);
         text("Press Enter to quit", width / 2, height / 3 + 1.5 * scale);
     }
@@ -492,6 +498,16 @@ function keyPressed() {
                     selectedGameMode = 0;
             }
         } else if (selectedMenuOption == 2) {
+            if (keyCode == LEFT_ARROW) {
+                selectedWinCondition--;
+                if (selectedWinCondition < 0)
+                    selectedWinCondition = winConditions.length - 1;
+            } else if (keyCode == RIGHT_ARROW) {
+                selectedWinCondition++;
+                if (selectedWinCondition >= winConditions.length)
+                    selectedWinCondition = 0;
+            }
+        } else if (selectedMenuOption == 3) {
             if (keyCode == BACKSPACE) {
                 if (seed)
                     seed = seed.substring(0, seed.length - 1);
@@ -500,9 +516,9 @@ function keyPressed() {
                     seed = "";
                 seed += key;
             }
-        } else if (selectedMenuOption == 3 && (keyCode == LEFT_ARROW || keyCode == RIGHT_ARROW || keyCode == ENTER)) {
+        } else if (selectedMenuOption == 4 && (keyCode == LEFT_ARROW || keyCode == RIGHT_ARROW || keyCode == ENTER)) {
             killScreenEnabled = !killScreenEnabled;
-        } else if (selectedMenuOption == 4) {
+        } else if (selectedMenuOption == 5) {
             if (keyCode == LEFT_ARROW) {
                 selectedDesign--;
                 if (selectedDesign < 0)
@@ -746,6 +762,13 @@ function awardPoints(rowsCleared) {
         messageQueue.push(new Message("#2c89f4", "Level Up!"));
     }
     clearedRows = newTotal;
+
+    if (selectedWinCondition == 1 && clearedRows >= 40 ||
+        selectedWinCondition == 2 && clearedRows >= 150) {
+        isGameOver = true;
+        hasWon = true;
+        onGameOver();
+    }
 }
 
 function getPieceFromQueue() {
